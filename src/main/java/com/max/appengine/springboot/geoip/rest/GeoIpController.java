@@ -55,7 +55,7 @@ public class GeoIpController extends AbstractApiController {
     status.append("Your IP: " + getIp(request) + "\n");
     status.append(geoIpService.getDatabaseFileStatus() + "\n");
     status.append(geoIpService.getDatabaseReaderStatus());
-    
+
     if (action.isPresent() && action.get().equals("reload")) {
       status.append("Service reloaded\n");
       try {
@@ -63,11 +63,11 @@ public class GeoIpController extends AbstractApiController {
       } catch (IOException e) {
         status.append("Reload failed\n");
       }
-      
+
       status.append(geoIpService.getDatabaseFileStatus() + "\n");
       status.append(geoIpService.getDatabaseReaderStatus());
     }
-    
+
     return sendResponseBase(status.toString());
   }
 }

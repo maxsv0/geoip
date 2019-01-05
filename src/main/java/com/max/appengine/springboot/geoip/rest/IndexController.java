@@ -25,7 +25,7 @@ import com.max.appengine.springboot.geoip.model.ApiResponseBase;
 @RestController
 public class IndexController extends AbstractApiController {
   public static final String VERSION_NAME = "Geo IP API v.1";
-  
+
   @RequestMapping(value = "/", method = RequestMethod.GET)
   public ResponseEntity<ApiResponseBase> index(HttpServletRequest request) {
     String version = SystemProperty.version.get();

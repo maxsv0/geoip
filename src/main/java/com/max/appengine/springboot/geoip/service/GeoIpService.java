@@ -82,7 +82,7 @@ public class GeoIpService {
       return "GeoIp file: " + this.fileDb.getAbsolutePath() + " size: " + this.fileDb.length();
     }
   }
-  
+
   public void initGeoIpDatabase() throws IOException {
     this.fileDb = createDatabaseFile();
 

@@ -30,19 +30,19 @@ public class StorageService {
 
   public void fetchFile(String fileName, File file) throws IOException {
     BlobKey blobKey = blobstoreService.createGsBlobKey("/gs/" + GCS_BUCKET + "/" + fileName);
-    
+
     // TODO: rewrite this procedure properly
     // check blobkey
     // know file size
     // don't throw
     // avoid void
-    
-//    if (blobKey != null) {
-//      
-//    }
-    
+
+    // if (blobKey != null) {
+    //
+    // }
+
     FileOutputStream stream = new FileOutputStream(file);
-        
+
     long blockSize = 1024 * 512;
     long inxStart = 0;
     long inxEnd = blockSize;
@@ -51,7 +51,7 @@ public class StorageService {
     do {
       try {
         byte[] b = blobstoreService.fetchData(blobKey, inxStart, inxEnd);
-        
+
         stream.write(b);
 
         if (b.length < blockSize)
@@ -65,7 +65,7 @@ public class StorageService {
       }
 
     } while (!flag);
-    
+
     stream.close();
   }
 }
