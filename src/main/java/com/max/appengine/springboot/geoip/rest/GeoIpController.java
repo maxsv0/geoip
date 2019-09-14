@@ -14,16 +14,16 @@
 
 package com.max.appengine.springboot.geoip.rest;
 
-import java.io.IOException;
-import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.max.appengine.springboot.geoip.model.ApiResponseBase;
+import com.max.appengine.springboot.geoip.model.Locale;
 import com.max.appengine.springboot.geoip.service.GeoIpService;
 
 @CrossOrigin
@@ -38,36 +38,19 @@ public class GeoIpController extends AbstractApiController {
   }
 
   @RequestMapping(value = "/ip", method = RequestMethod.GET)
-  public ResponseEntity<ApiResponseBase> getLocationFromIp(HttpServletRequest request) {
+  public ResponseEntity<ApiResponseBase> getLocationFromIp(HttpServletRequest request,
+      @RequestParam Locale locale) {
 
-    Optional<String> location = geoIpService.getLocationFromIp(getIp(request));
-    if (location.isPresent()) {
-      return sendResponseBase(location.get());
+    String cityLatLong = request.getHeader("X-AppEngine-CityLatLong");
+
+    String country = request.getHeader("X-AppEngine-Country");
+    
+    if (cityLatLong != null) {
+      String location = geoIpService.getLocationFromCoordinates(cityLatLong, locale);
+
+      return sendResponseGeoIp(location, country, cityLatLong, locale);
     } else {
       return sendResponseError("GeoIp Service not ready");
     }
-  }
-
-  @RequestMapping(value = "/geoip", method = RequestMethod.GET)
-  public ResponseEntity<ApiResponseBase> status(HttpServletRequest request,
-      Optional<String> action) {
-    StringBuilder status = new StringBuilder();
-    status.append("Your IP: " + getIp(request) + "\n");
-    status.append(geoIpService.getDatabaseFileStatus() + "\n");
-    status.append(geoIpService.getDatabaseReaderStatus());
-
-    if (action.isPresent() && action.get().equals("reload")) {
-      status.append("Service reloaded\n");
-      try {
-        geoIpService.initGeoIpDatabase();
-      } catch (IOException e) {
-        status.append("Reload failed\n");
-      }
-
-      status.append(geoIpService.getDatabaseFileStatus() + "\n");
-      status.append(geoIpService.getDatabaseReaderStatus());
-    }
-
-    return sendResponseBase(status.toString());
   }
 }

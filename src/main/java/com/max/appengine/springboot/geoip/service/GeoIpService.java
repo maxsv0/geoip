@@ -14,99 +14,81 @@
 
 package com.max.appengine.springboot.geoip.service;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.util.Optional;
+import java.io.InputStreamReader;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.maxmind.geoip2.DatabaseReader;
-import com.maxmind.geoip2.exception.GeoIp2Exception;
-import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.record.City;
-import com.maxmind.geoip2.record.Country;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.max.appengine.springboot.geoip.model.GoogleGeocode;
+import com.max.appengine.springboot.geoip.model.Locale;
 
 @Service
 public class GeoIpService {
-  public static final String GEOIP_DATABASE_PATH = "GeoIP2-City.mmdb";
+  public static final String API_URL = "https://maps.googleapis.com/maps/api/geocode/json"
+      + "?latlng={latlng}&key={key}&language={language}&result_type=locality";
 
-  private DatabaseReader reader;
+  public static final String API_KEY = "";
 
-  private File fileDb;
-
-  private final StorageService storageService;
+  private final ObjectMapper mapper = new ObjectMapper();
 
   @Autowired
-  public GeoIpService(StorageService storageService) throws IOException {
-    this.storageService = storageService;
-
-    initGeoIpDatabase();
+  public GeoIpService() {
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 
-  public Optional<String> getLocationFromIp(String ip) {
-    if (this.reader == null) {
-      return Optional.empty();
-    }
+  public String getLocationFromCoordinates(String latlng, Locale locale) {
+
+    String requestUrl = API_URL;
+    requestUrl = requestUrl.replace("{latlng}", latlng);
+    requestUrl = requestUrl.replace("{key}", API_KEY);
+    requestUrl = requestUrl.replace("{language}", locale.toString().toLowerCase());
+
+    RequestConfig requestConfig =
+        RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
+
+    HttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(requestConfig).build();
+    HttpGet request = new HttpGet(requestUrl);
 
     try {
-      InetAddress ipAddress = InetAddress.getByName(ip);
-      CityResponse response = this.reader.city(ipAddress);
-      Country country = response.getCountry();
-      City city = response.getCity();
-      String location;
+      HttpResponse response = client.execute(request);
 
-      if (city != null && city.getName() != null) {
-        location = city.getName() + ", " + country.getName();
-      } else {
-        location = country.getName();
+      BufferedReader rd =
+          new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+
+      StringBuffer result = new StringBuffer();
+      String line = "";
+
+      while ((line = rd.readLine()) != null) {
+        result.append(line);
       }
 
-      return Optional.of(location);
-    } catch (GeoIp2Exception | IOException error) {
-      return Optional.empty();
-    }
-  }
+      GoogleGeocode geoCode = parsePayload(result.toString());
 
-  public String getDatabaseReaderStatus() {
-    if (this.fileDb == null) {
-      return "GeoIp reader is null";
-    } else {
-      return "GeoIp reader: " + this.reader;
-    }
-  }
+      return geoCode.getResults().get(0).getFormattedAddress();
 
-  public String getDatabaseFileStatus() {
-    if (this.fileDb == null) {
-      return "GeoIp file is null";
-    } else {
-      return "GeoIp file: " + this.fileDb.getAbsolutePath() + " size: " + this.fileDb.length();
-    }
-  }
-
-  public void initGeoIpDatabase() throws IOException {
-    this.fileDb = createDatabaseFile();
-
-    if (this.fileDb != null) {
-      this.reader = createDatabaseReader();
-    }
-  }
-
-  private File createDatabaseFile() throws IOException {
-    File dbFile = null;
-    try {
-      dbFile = File.createTempFile("geoip-", ".tmp");
-      this.storageService.fetchFile(GEOIP_DATABASE_PATH, dbFile);
-    } catch (IOException e) {
-      throw e;
-    }
-    return dbFile;
-  }
-
-  private DatabaseReader createDatabaseReader() {
-    try {
-      return new DatabaseReader.Builder(this.fileDb).build();
-    } catch (IOException e) {
+    } catch (IOException error) {
       return null;
     }
   }
+
+  private GoogleGeocode parsePayload(String jsonNodeString) throws IOException {
+    JsonNode resultNode = mapper.readTree(jsonNodeString);
+    System.out.println(jsonNodeString);
+    System.out.println(resultNode);
+
+    GoogleGeocode result = mapper.convertValue(resultNode, GoogleGeocode.class);
+    System.out.println(result);
+    return result;
+
+  }
+
 }

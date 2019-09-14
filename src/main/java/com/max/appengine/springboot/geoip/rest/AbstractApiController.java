@@ -21,6 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import com.max.appengine.springboot.geoip.model.ApiResponseBase;
 import com.max.appengine.springboot.geoip.model.ApiResponseError;
+import com.max.appengine.springboot.geoip.model.ApiResponseGeoIp;
+import com.max.appengine.springboot.geoip.model.Locale;
 
 public abstract class AbstractApiController {
   public static final String MESSAGE_INVALID_ACCESS = "Access denied, Please log in and try again";
@@ -30,9 +32,14 @@ public abstract class AbstractApiController {
   protected ResponseEntity<ApiResponseBase> sendResponseError(String message) {
     return sendResponseOk(new ApiResponseError(message));
   }
+  
+  protected ResponseEntity<ApiResponseBase> sendResponseBase(String msg) {
+    return sendResponseOk(new ApiResponseBase(msg));
+  }
 
-  protected ResponseEntity<ApiResponseBase> sendResponseBase(String message) {
-    return sendResponseOk(new ApiResponseBase(message));
+  protected ResponseEntity<ApiResponseBase> sendResponseGeoIp(String location, String country,
+      String cityLatLong, Locale locale) {
+    return sendResponseOk(new ApiResponseGeoIp(location, country, cityLatLong, locale));
   }
 
   protected ResponseEntity<ApiResponseBase> sendResponseOk(ApiResponseBase response) {
